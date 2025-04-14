@@ -1,33 +1,26 @@
-import { withAuth } from "next-auth/middleware";
+// middleware.ts
+
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const isAuth = !!token;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req, res });
 
-    // فقط امنع غير المسجلين من دخول لوحة التحكم
-    if (!isAuth && req.nextUrl.pathname.startsWith("/dashboard")) {
-      return NextResponse.redirect(
-        new URL(`/login?from=${req.nextUrl.pathname}`, req.url)
-      );
-    }
+  const { data: { session } } = await supabase.auth.getSession();
 
-    // لو المستخدم مسجل دخول، وداخل عالصفحة الرئيسية فقط (مثلاً /)، ووده للدashboard
-    if (isAuth && req.nextUrl.pathname === "/") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
+  const isAuth = !!session;
 
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
+  if (!isAuth && req.nextUrl.pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(
+      new URL(`/login?from=${req.nextUrl.pathname}`, req.url)
+    );
   }
-);
 
-// ❌ حذفنا "/login" من هنا
+  return res;
+}
+
 export const config = {
   matcher: ["/dashboard/:path*"],
 };

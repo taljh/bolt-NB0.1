@@ -46,13 +46,18 @@ export default function RegisterPage() {
         }),
       });
 
-      const result = await response.json();
+      const contentType = response.headers.get("content-type");
 
-      if (!response.ok) {
-        throw new Error(result.error || "حدث خطأ أثناء التسجيل");
+      if (response.ok) {
+        router.push("/dashboard");
+      } else if (contentType && contentType.includes("application/json")) {
+        const result = await response.json();
+        throw new Error(result.error || "فشل التسجيل");
+      } else {
+        const errorText = await response.text();
+        console.error("رد غير متوقع:", errorText);
+        throw new Error("حدث خطأ غير متوقع");
       }
-
-      router.push("/login?registered=true");
     } catch (error: any) {
       setError(error.message);
     } finally {

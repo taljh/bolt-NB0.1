@@ -1,33 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
-// @ts-ignore
-import bcrypt from "bcryptjs";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-); // نستخدم service role key لأنه يحتاج صلاحيات أكبر للتسجيل
+);
 
 export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json();
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
-    // تأكد ما في حساب بنفس الإيميل
-    const { data: existingUser, error: findError } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from("users")
       .select("id")
       .eq("email", email)
       .single();
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "البريد الإلكتروني مستخدم بالفعل" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "البريد الإلكتروني مستخدم بالفعل" }, { status: 400 });
     }
 
-    // 1. إنشاء حساب جديد في Supabase Auth
-    const { data: authUser, error: signUpError } = await supabase.auth.admin.createUser({
+    const { data: authUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -35,16 +32,12 @@ export async function POST(request: Request) {
 
     if (signUpError || !authUser.user) {
       console.error("signUp error:", signUpError);
-      return NextResponse.json(
-        { error: "فشل إنشاء المستخدم في auth" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "فشل إنشاء المستخدم في auth" }, { status: 500 });
     }
 
     const userId = authUser.user.id;
 
-    // 2. إضافة بيانات المستخدم في جدول users
-    const { error: insertError } = await supabase.from("users").insert([
+    const { error: insertError } = await supabaseAdmin.from("users").insert([
       {
         id: userId,
         name,
@@ -57,21 +50,23 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error("Insert error:", insertError);
-      return NextResponse.json(
-        { error: "فشل حفظ بيانات المستخدم" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "فشل حفظ بيانات المستخدم" }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { message: "تم إنشاء الحساب بنجاح" },
-      { status: 201 }
-    );
+    // تسجيل الدخول الفوري بعد الإنشاء
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      console.error("Sign-in error:", signInError);
+      return NextResponse.json({ error: "تم إنشاء الحساب لكن فشل تسجيل الدخول" }, { status: 500 });
+    }
+
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   } catch (error: any) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: "حدث خطأ أثناء إنشاء الحساب" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "حدث خطأ أثناء إنشاء الحساب" }, { status: 500 });
   }
 }

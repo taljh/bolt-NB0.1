@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,18 +33,21 @@ export default function LoginPage() {
       setIsLoading(true);
       setError("");
 
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: data.email,
-        password: data.password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
       });
 
-      if (result?.error) {
-        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-        return;
+      if (res.ok) {
+        router.push("/dashboard");
+      } else {
+        const result = await res.json();
+        setError(result.error || "حدث خطأ أثناء تسجيل الدخول");
       }
-
-      router.push("/dashboard");
     } catch (error) {
       setError("حدث خطأ أثناء تسجيل الدخول");
     } finally {
