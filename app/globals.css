@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 97%;
+  --foreground: 240 99% 64%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 240 99% 64%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 99% 64%;
+  
+  --primary: 240 99% 64%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 240 99% 97%;
+  --secondary-foreground: 240 99% 64%;
+  
+  --muted: 240 99% 97%;
+  --muted-foreground: 240 10% 40%;
+  
+  --accent: 240 99% 97%;
+  --accent-foreground: 240 99% 64%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 99% 97%;
+  --input: 240 99% 97%;
+  --ring: 240 99% 64%;
+  
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 240 99% 10%;
+  --foreground: 0 0% 98%;
+  
+  --card: 240 99% 15%;
+  --card-foreground: 0 0% 98%;
+  
+  --popover: 240 99% 15%;
+  --popover-foreground: 0 0% 98%;
+  
+  --primary: 240 99% 64%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 240 99% 20%;
+  --secondary-foreground: 0 0% 98%;
+  
+  --muted: 240 99% 20%;
+  --muted-foreground: 240 10% 60%;
+  
+  --accent: 240 99% 20%;
+  --accent-foreground: 0 0% 98%;
+  
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --border: 240 99% 20%;
+  --input: 240 99% 20%;
+  --ring: 240 99% 64%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-300% {
+    background-size: 300% 300%;
+  }
+  
+  .animate-gradient {
+    animation: moveGradient 8s infinite linear;
+  }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 150% 50%; }
+  100% { background-position: 0% 50%; }
+}
