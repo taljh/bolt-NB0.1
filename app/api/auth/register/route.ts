@@ -1,22 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
+// @ts-ignore
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error("Missing Supabase environment variables");
-}
-
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+); // نستخدم service role key لأنه يحتاج صلاحيات أكبر للتسجيل
 
 export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json();
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
+    // تأكد ما في حساب بنفس الإيميل
+    const { data: existingUser, error: findError } = await supabase
       .from("users")
       .select("id")
       .eq("email", email)
@@ -29,28 +26,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 1. إنشاء حساب جديد في Supabase Auth
+    const { data: authUser, error: signUpError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
 
-    // Create new user
-    const { data: newUser, error: createError } = await supabase
-      .from("users")
-      .insert([
-        {
-          name,
-          email,
-          password: hashedPassword,
-          role: "user",
-          plan: "free",
-          features: ["basic_pricing", "basic_analytics"],
-          created_at: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single();
+    if (signUpError || !authUser.user) {
+      console.error("signUp error:", signUpError);
+      return NextResponse.json(
+        { error: "فشل إنشاء المستخدم في auth" },
+        { status: 500 }
+      );
+    }
 
-    if (createError) {
-      throw createError;
+    const userId = authUser.user.id;
+
+    // 2. إضافة بيانات المستخدم في جدول users
+    const { error: insertError } = await supabase.from("users").insert([
+      {
+        id: userId,
+        name,
+        email,
+        role: "user",
+        plan: "free",
+        features: ["basic_pricing", "basic_analytics"],
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      return NextResponse.json(
+        { error: "فشل حفظ بيانات المستخدم" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(

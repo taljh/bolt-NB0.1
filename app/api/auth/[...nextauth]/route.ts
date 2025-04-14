@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
-import bcrypt from "bcryptjs";
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error("Missing Supabase environment variables");
@@ -25,30 +24,18 @@ const handler = NextAuth({
           throw new Error("Missing credentials");
         }
 
-        const { data: user, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", credentials.email)
-          .single();
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: credentials.email,
+          password: credentials.password,
+        });
 
-        if (error || !user) {
-          throw new Error("Invalid credentials");
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
+        if (error || !data.user) {
           throw new Error("Invalid credentials");
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          id: data.user.id,
+          email: data.user.email,
         };
       },
     }),
@@ -59,7 +46,7 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        token.role = user.role ?? "user"; // نضيف role لو توفر
       }
       return token;
     },
