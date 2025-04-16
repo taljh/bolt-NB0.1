@@ -24,7 +24,7 @@ const formSchema = z.object({
   extra_expenses: z.number().min(0).optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+export type FormData = z.infer<typeof formSchema>;
 
 interface ProductPricingFormProps {
   initialSettings: {
