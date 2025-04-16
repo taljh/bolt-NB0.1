@@ -25,12 +25,19 @@ export default function OrdersPage() {
           </Button>
           <Button
             onClick={async () => {
-              const res = await fetch("/api/salla/orders", { method: "POST" });
-              const data = await res.json();
-              if (data.success) {
-                alert(`✅ تم استرداد ${data.count || "الطلبات"} بنجاح!`);
-              } else {
-                alert("❌ فشل في الاسترداد من سلة.");
+              try {
+                const res = await fetch("/api/salla/orders", { method: "POST" });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                  alert(`✅ تم استيراد ${data.count || "الطلبات"} بنجاح!`);
+                } else {
+                  console.error("⚠️ فشل استيراد الطلبات من سلة:", data?.error || data);
+                  alert("❌ فشل في استيراد الطلبات من سلة.");
+                }
+              } catch (error) {
+                console.error("❌ خطأ غير متوقع:", error);
+                alert("❌ حدث خطأ غير متوقع أثناء استيراد الطلبات.");
               }
             }}
             variant="outline"

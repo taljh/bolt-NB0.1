@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = createRouteHandlerClient({ cookies });
 
   // نحصل على المستخدم الحالي
   const {
@@ -42,6 +42,11 @@ export async function POST(req: NextRequest) {
   }
 
   const orders = await response.json();
+
+  if (!orders?.data || !Array.isArray(orders.data) || orders.data.length === 0) {
+    console.error("🚫 لا توجد طلبات أو البيانات غير صالحة:", orders);
+    return NextResponse.json({ error: "لم يتم العثور على طلبات جديدة أو البيانات غير صالحة." }, { status: 404 });
+  }
 
   // نحفظ كل طلب في جدول orders
   for (const order of orders.data) {

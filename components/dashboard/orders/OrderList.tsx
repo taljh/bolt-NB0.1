@@ -56,7 +56,7 @@ export default function OrderList() {
             <tbody className="divide-y">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{order.order_number}</td>
+                  <td className="px-6 py-4 whitespace-nowrap font-medium">{order.order_number || order.id}</td>
                   <td className="px-6 py-4">
                     <span className="inline-block px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
                       {order.status}
