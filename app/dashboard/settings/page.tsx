@@ -1,30 +1,28 @@
 import { getCurrentUser } from "@/lib/get-user";
+import ProjectSettingsForm from "@/components/dashboard/settings/SettingsForm";
+import SallaIntegrationCard from "@/components/dashboard/settings/SallaIntegrationCard";
+import { redirect } from "next/navigation";
+
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
 
-  return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-bold mb-4">الإعدادات</h1>
+  if (!user) {
+    redirect("/login");
+  }
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <p className="text-sm text-gray-500">الاسم</p>
-          <p className="font-medium text-gray-800">{user?.name || "غير متوفر"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">البريد الإلكتروني</p>
-          <p className="font-medium text-gray-800">{user?.email || "غير متوفر"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">الخطة</p>
-          <p className="font-medium text-gray-800">{user?.plan || "غير محددة"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">الصلاحية</p>
-          <p className="font-medium text-gray-800">{user?.role || "مستخدم"}</p>
-        </div>
-      </div>
+  
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-10">
+      <section>
+        <h1 className="text-2xl font-bold text-[#5B5AEC] mb-4">بيانات المستخدم</h1>
+        <p className="text-gray-700">الاسم: {user?.name}</p>
+        <p className="text-gray-700">البريد: {user?.email}</p>
+      </section>
+
+      <SallaIntegrationCard userId={user?.id} />
+
+      <ProjectSettingsForm userId={user?.id} />
     </div>
   );
 }

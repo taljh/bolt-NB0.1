@@ -7,10 +7,10 @@ export async function getCurrentUser() {
   const supabase = createServerComponentClient({ cookies });
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
 
-  const userId = session?.user.id;
+  const userId = authUser?.id;
   if (!userId) return null;
 
   const { data: user, error } = await supabase
