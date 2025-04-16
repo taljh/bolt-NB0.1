@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import ProductPricingForm from "@/components/dashboard/products/ProductPricingForm";
 import { getCurrentUser } from "@/lib/get-user";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";

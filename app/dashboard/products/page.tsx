@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getCurrentUser } from "@/lib/get-user";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
