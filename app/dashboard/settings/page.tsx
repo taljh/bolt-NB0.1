@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getCurrentUser } from "@/lib/get-user";
 import ProjectSettingsForm from "@/components/dashboard/settings/SettingsForm";
 import SallaIntegrationCard from "@/components/dashboard/settings/SallaIntegrationCard";

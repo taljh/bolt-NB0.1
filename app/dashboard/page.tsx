@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getCurrentUser } from "@/lib/get-user";
 import KpiCards from "@/components/dashboard/KpiCards";
 import SmartRecommendationCard from "@/components/dashboard/SmartRecommendationCard";

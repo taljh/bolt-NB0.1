@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ReactNode } from "react";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { getCurrentUser } from "@/lib/get-user";
