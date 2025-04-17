@@ -208,7 +208,7 @@ importers:
         version: 3.24.2
     devDependencies:
       mini-css-extract-plugin:
-        specifier: ^2.9.2
+        specifier: ^2.7.6
         version: 2.9.2(webpack@5.99.5)
 
 packages:
