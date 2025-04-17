@@ -179,8 +179,23 @@ export default function PremiumPage() {
   );
 }
 
+import type { LucideIcon } from "lucide-react";
+
+interface StatsCardProps {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+  description: string;
+}
+
+interface FeatureProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
 // مكون بطاقة الإحصائيات
-const StatsCard = ({ icon: Icon, value, label, description }) => (
+const StatsCard = ({ icon: Icon, value, label, description }: StatsCardProps) => (
   <Card className="border-none shadow-lg">
     <CardContent className="pt-6">
       <div className="flex items-center gap-4">
@@ -200,7 +215,7 @@ const StatsCard = ({ icon: Icon, value, label, description }) => (
 );
 
 // مكون الميزات المتقدمة
-const AdvancedFeature = ({ icon: Icon, title, description }) => (
+const AdvancedFeature = ({ icon: Icon, title, description }: FeatureProps) => (
   <div className="space-y-3">
     <Icon className="w-8 h-8" />
     <h3 className="text-lg font-semibold">{title}</h3>
