@@ -3,62 +3,45 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 97%;
+  --background: 240 33% 97%;
   --foreground: 240 99% 64%;
-  
   --card: 0 0% 100%;
   --card-foreground: 240 99% 64%;
-  
   --popover: 0 0% 100%;
   --popover-foreground: 240 99% 64%;
-  
   --primary: 240 99% 64%;
   --primary-foreground: 0 0% 100%;
-  
   --secondary: 240 99% 97%;
   --secondary-foreground: 240 99% 64%;
-  
   --muted: 240 99% 97%;
   --muted-foreground: 240 10% 40%;
-  
   --accent: 240 99% 97%;
   --accent-foreground: 240 99% 64%;
-  
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-
   --border: 240 99% 97%;
   --input: 240 99% 97%;
   --ring: 240 99% 64%;
-  
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: 240 99% 10%;
+  --background: 240 33% 10%;
   --foreground: 0 0% 98%;
-  
   --card: 240 99% 15%;
   --card-foreground: 0 0% 98%;
-  
   --popover: 240 99% 15%;
   --popover-foreground: 0 0% 98%;
-  
   --primary: 240 99% 64%;
   --primary-foreground: 0 0% 100%;
-  
   --secondary: 240 99% 20%;
   --secondary-foreground: 0 0% 98%;
-  
   --muted: 240 99% 20%;
   --muted-foreground: 240 10% 60%;
-  
   --accent: 240 99% 20%;
   --accent-foreground: 0 0% 98%;
-  
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  
   --border: 240 99% 20%;
   --input: 240 99% 20%;
   --ring: 240 99% 64%;
@@ -74,17 +57,40 @@
 }
 
 @layer utilities {
-  .bg-300% {
-    background-size: 300% 300%;
+  .premium-gradient {
+    background: linear-gradient(135deg, 
+      theme('colors.indigo.600'), 
+      theme('colors.purple.600')
+    );
   }
-  
-  .animate-gradient {
-    animation: moveGradient 8s infinite linear;
+
+  .premium-text {
+    background: linear-gradient(135deg, 
+      theme('colors.indigo.500'), 
+      theme('colors.purple.500')
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-animate {
+    animation: gradientMove 8s linear infinite;
+    will-change: background-position;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }
 
-@keyframes moveGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 150% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 150% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }

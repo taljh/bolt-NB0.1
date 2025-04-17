@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Sparkles, Lock, ChevronRight, TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SmartRecommendationCardProps {
   plan: "free" | "pro" | "advanced" | null;
@@ -10,54 +12,128 @@ export default function SmartRecommendationCard({ plan }: SmartRecommendationCar
   const [hovered, setHovered] = useState(false);
   const isFreePlan = plan === "free";
 
+  const recommendations = [
+    {
+      metric: "هامش الربح",
+      current: "28%",
+      potential: "40%",
+      improvement: "+12%",
+      description: "تعديل تفصيلة العباية الأساسية"
+    },
+    {
+      metric: "التكلفة",
+      current: "180 ريال",
+      potential: "155 ريال",
+      improvement: "-25 ريال",
+      description: "تحسين استهلاك القماش"
+    }
+  ];
+
   return (
     <div
-      className="relative rounded-xl bg-gradient-to-br from-[#F8FAFC] via-white to-[#F1F5F9] border border-dashed border-gray-300/60 shadow-inner transition-all duration-500 overflow-hidden"
+      className={cn(
+        "relative rounded-2xl transition-all duration-500 overflow-hidden",
+        "bg-gradient-to-br from-white via-indigo-50/30 to-white",
+        "border border-indigo-100",
+        "hover:shadow-lg hover:shadow-indigo-100/50",
+        "group"
+      )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* محتوى الكرت */}
-      <div
-        className={`p-6 transition-opacity duration-300 ${
-          isFreePlan && hovered ? "opacity-30" : "opacity-100"
-        }`}
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-xl font-bold text-[#5B5AEC]">🔒 نَسيق يقرّر</span>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-            ميزة مغلقة
+      {/* المحتوى الرئيسي */}
+      <div className={cn(
+        "p-6 transition-all duration-300",
+        isFreePlan && hovered ? "opacity-30 blur-[2px]" : "opacity-100"
+      )}>
+        {/* الترويسة */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-indigo-100/50 text-indigo-600">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                توصيات نَسيق الذكية
+              </h3>
+              <p className="text-sm text-gray-500">
+                {isFreePlan ? "ميزة متقدمة" : "تحليل مخصص لمشروعك"}
+              </p>
+            </div>
+          </div>
+          {isFreePlan && (
+            <Lock className="w-5 h-5 text-gray-400" />
+          )}
+        </div>
+
+        {/* محتوى التوصيات */}
+        <div className="space-y-6">
+          {recommendations.map((rec, index) => (
+            <div 
+              key={index}
+              className="p-4 rounded-xl bg-white/80 border border-indigo-50 hover:border-indigo-200 transition-colors"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">
+                  {rec.metric}
+                </span>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">{rec.current}</span>
+                  <ChevronRight className="w-4 h-4 text-indigo-400" />
+                  <span className="font-semibold text-indigo-600">{rec.potential}</span>
+                  <span className="text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full text-xs">
+                    {rec.improvement}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">{rec.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* إحصائية سريعة */}
+        <div className="mt-6 flex items-center gap-2 text-sm text-gray-500">
+          <TrendingUp className="w-4 h-4 text-green-500" />
+          <span>
+            85% من العملاء شافوا تحسن في الأرباح باتباع توصيات نَسيق
           </span>
         </div>
-        <p className="text-gray-800 text-lg font-medium leading-relaxed mb-3">
-          تفصيلة وحدة – لو عدّلتها بالشكل الصح،<br />
-          هامشك ممكن يقفز{" "}
-          <span className="text-[#5B5AEC] font-bold">12%</span>.
-        </p>
-        <p className="text-gray-600 text-sm leading-relaxed mb-2">
-          النسخة القادمة من نَسيق ما تحلّل لك بس، تقترح، تقرّر، وتعلّمك كيف تنفّذ.
-        </p>
-        <p className="text-gray-500 text-xs">
-          كل توصية مبنية على أرقامك، وتشتغل عشان شيء واحد: <br />
-          <span className="font-semibold text-[#5B5AEC]">
-            تنمّي مشروعك. تبني براندك.
-          </span>
-        </p>
       </div>
 
-      {/* زر خاص للمستخدمين بباقات free */}
+      {/* طبقة الترقية للخطة المجانية */}
       {isFreePlan && hovered && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <button className="bg-[#5B5AEC] text-white px-6 py-2 rounded-full shadow hover:bg-[#4b4ae0] transition-all">
-            🔓 ترقية لفتح الميزة
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 bg-white/20 backdrop-blur-[2px]">
+          <p className="text-lg font-semibold text-gray-900 text-center px-6">
+            اكتشف كيف يمكن لنَسيق تحسين أرباح مشروعك
+          </p>
+          <button className={cn(
+            "px-6 py-2.5 rounded-full",
+            "bg-indigo-600 text-white",
+            "hover:bg-indigo-700 transform hover:scale-105",
+            "transition-all duration-300",
+            "shadow-lg shadow-indigo-200",
+            "flex items-center gap-2"
+          )}>
+            <Sparkles className="w-4 h-4" />
+            ترقية لفتح الميزة
           </button>
         </div>
       )}
 
-      {/* زر دائم للباقات الأعلى */}
+      {/* زر للباقات المدفوعة */}
       {!isFreePlan && (
-        <div className="absolute bottom-4 left-4 z-10">
-          <button className="bg-[#5B5AEC] text-white px-5 py-2 rounded-full shadow hover:bg-[#4b4ae0] transition-all text-sm">
-            ✨ استكشاف الميزة
+        <div className="px-6 pb-6">
+          <button className={cn(
+            "w-full px-6 py-2.5 rounded-xl",
+            "bg-gradient-to-r from-indigo-600 to-indigo-500",
+            "text-white font-medium",
+            "hover:from-indigo-500 hover:to-indigo-600",
+            "transition-all duration-300",
+            "shadow-lg shadow-indigo-200/50",
+            "flex items-center justify-center gap-2"
+          )}>
+            <Sparkles className="w-4 h-4" />
+            استكشف التوصيات المخصصة
           </button>
         </div>
       )}
