@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import LoadingScreen from "@/components/ui/loading-screen";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient();
 
