@@ -1,20 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Edit, Eye, Archive, Star, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
+// تعريف واجهة المنتج
 interface Product {
   id: string;
   name: string;
   sku?: string;
-  status?: string;
-  total_cost: number;
-  profit_margin: number;
-  production_status?: string;
+  total_cost?: number;
+  profit_margin?: number;
   quantity?: number;
+  created_at?: string;
+  user_id?: string;
+}
+
+// تعريف واجهة خصائص المكون
+interface ProductListProps {
+  products: Product[];
 }
 
 export default function ProductList({ products }: ProductListProps) {
@@ -42,9 +48,11 @@ export default function ProductList({ products }: ProductListProps) {
                   <h3 className="font-medium text-gray-900">
                     {product.name}
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    {product.sku}
-                  </p>
+                  {product.sku && (
+                    <p className="text-sm text-gray-500">
+                      SKU: {product.sku}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {product.quantity === 0 && (
@@ -53,7 +61,7 @@ export default function ProductList({ products }: ProductListProps) {
                       نفذت الكمية
                     </span>
                   )}
-                  {product.profit_margin < 20 && (
+                  {product.profit_margin && product.profit_margin < 20 && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                       <Star className="w-3 h-3 ml-1" />
                       مراجعة الربحية
@@ -67,21 +75,19 @@ export default function ProductList({ products }: ProductListProps) {
                 <div>
                   <p className="text-sm text-gray-500">التكلفة</p>
                   <p className="font-medium">
-                    {product.total_cost} ريال
+                    {product.total_cost?.toLocaleString()} ريال
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">هامش الربح</p>
                   <p className={cn(
                     "font-medium",
-                    product.profit_margin < 20 ? "text-red-600" : "text-green-600"
+                    product.profit_margin && product.profit_margin < 20 
+                      ? "text-red-600" 
+                      : "text-green-600"
                   )}>
                     {product.profit_margin}%
                   </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">حالة الإنتاج</p>
-                  <ProductionStatus status={product.production_status} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">الكمية</p>
@@ -114,30 +120,5 @@ export default function ProductList({ products }: ProductListProps) {
         </motion.div>
       ))}
     </div>
-  );
-}
-
-function ProductionStatus({ status }: { status: string }) {
-  const styles = {
-    pending: "bg-yellow-100 text-yellow-800",
-    inProgress: "bg-blue-100 text-blue-800",
-    completed: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800"
-  };
-
-  const labels = {
-    pending: "قيد الانتظار",
-    inProgress: "قيد الإنتاج",
-    completed: "مكتمل",
-    cancelled: "ملغي"
-  };
-
-  return (
-    <span className={cn(
-      "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium",
-      styles[status as keyof typeof styles]
-    )}>
-      {labels[status as keyof typeof labels]}
-    </span>
   );
 }
