@@ -4,40 +4,36 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
-    console.log('بدء عملية استيراد المنتجات...');
     const supabase = createRouteHandlerClient({ cookies });
     
-    // 1. التحقق من المستخدم الحالي
+    // 1. Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json(
-        { message: "غير مصرح" },
+        { message: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // 2. جلب توكن سلة
+    // 2. Get the user's Salla token
     const { data: settings } = await supabase
       .from('project_settings')
-      .select('salla_access_token')
+      .select('salla_access_token, salla_merchant_id')
       .eq('user_id', user.id)
       .single();
 
     if (!settings?.salla_access_token) {
       return NextResponse.json(
-        { message: "لم يتم ربط متجر سلة" },
+        { message: "Salla account not connected" },
         { status: 400 }
       );
     }
 
-    console.log('تم العثور على توكن سلة، جاري جلب المنتجات...');
-
-    // 3. جلب المنتجات من سلة مع دعم الصفحات
     let allProducts: any[] = [];
     let nextPage = 'https://api.salla.dev/admin/v2/products';
 
+    // 3. Fetch all products with pagination
     while (nextPage) {
-      console.log('جلب المنتجات من:', nextPage);
       const sallaResponse = await fetch(nextPage, {
         headers: {
           'Authorization': `Bearer ${settings.salla_access_token}`,
@@ -46,32 +42,33 @@ export async function POST() {
       });
 
       if (!sallaResponse.ok) {
-        console.error('خطأ في استجابة سلة:', sallaResponse.status, sallaResponse.statusText);
-        throw new Error(`خطأ في API سلة: ${sallaResponse.statusText}`);
+        throw new Error(`Salla API error: ${sallaResponse.statusText}`);
       }
 
       const responseData = await sallaResponse.json();
-      console.log(`تم جلب ${responseData.data?.length || 0} منتج من الصفحة الحالية`);
       allProducts = [...allProducts, ...responseData.data];
+      
+      // Check if there's a next page
       nextPage = responseData.pagination?.next_page || null;
     }
 
-    console.log(`إجمالي عدد المنتجات التي تم جلبها: ${allProducts.length}`);
-
-    // 4. تحويل وحفظ المنتجات في قاعدة البيانات
+    // 4. Transform and insert products into our database
     const productsToInsert = allProducts.map((product: any) => ({
       user_id: user.id,
       salla_id: product.id,
       name: product.name,
-      sku: product.sku || null,
+      sku: product.sku,
+      price: product.price?.amount,
+      quantity: product.quantity,
+      status: product.status === 'active' ? 'active' : 'inactive',
+      description: product.description,
+      categories: product.categories?.map((cat: any) => cat.name) || [],
+      images: product.images?.map((img: any) => img.url) || [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      source: 'salla'
     }));
 
-    console.log('جاري حفظ المنتجات في قاعدة البيانات...');
-
-    // 5. استخدام upsert لتحديث المنتجات الموجودة أو إضافة الجديدة
+    // 5. Use upsert to update existing products or insert new ones
     const { data: insertedProducts, error } = await supabase
       .from('products')
       .upsert(productsToInsert, {
@@ -81,23 +78,20 @@ export async function POST() {
       .select();
 
     if (error) {
-      console.error('خطأ في قاعدة البيانات:', error);
       throw error;
     }
-
-    console.log(`تم حفظ ${insertedProducts?.length || 0} منتج بنجاح`);
 
     return NextResponse.json({
       success: true,
       count: productsToInsert.length,
-      message: `تم استيراد ${productsToInsert.length} منتج بنجاح`
+      message: `Successfully imported ${productsToInsert.length} products`
     });
 
   } catch (error: any) {
-    console.error('خطأ في استيراد المنتجات:', error);
+    console.error('Error importing products:', error);
     return NextResponse.json(
       { 
-        message: error.message || "حدث خطأ أثناء استيراد المنتجات",
+        message: error.message || "Error importing products",
         error: error 
       },
       { status: 500 }

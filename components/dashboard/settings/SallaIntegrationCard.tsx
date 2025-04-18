@@ -26,7 +26,7 @@ export default function SallaIntegrationCard({ userId }: SallaIntegrationCardPro
       }
 
       const { data, error } = await supabase
-        .from("salla_stores")
+        .from("salla_tokens")
         .select("store_name")
         .eq("user_id", userId)
         .maybeSingle();
@@ -34,12 +34,13 @@ export default function SallaIntegrationCard({ userId }: SallaIntegrationCardPro
       if (error) {
         console.error("فشل التحقق من حالة الربط:", error.message);
         setIsConnected(false);
-      } else if (data?.store_name) {
+      } else if (data && data.store_name) {
         setStoreName(data.store_name);
         setIsConnected(true);
       } else {
         setIsConnected(false);
       }
+
       setIsLoading(false);
     };
 
