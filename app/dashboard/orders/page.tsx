@@ -26,14 +26,20 @@ export default function OrdersPage() {
           <Button
             onClick={async () => {
               try {
+                console.log("بدء عملية استيراد الطلبات من سلة...");
                 const res = await fetch("/api/salla/orders", { method: "POST" });
                 const data = await res.json();
-
+                
+                console.log("استجابة API:", { status: res.status, data });
+                
                 if (res.ok && data.success) {
+                  console.log(`✅ تم استيراد ${data.count} طلب/طلبات بنجاح`);
                   alert(`✅ تم استيراد ${data.count || "الطلبات"} بنجاح!`);
+                  // تحديث الصفحة لعرض الطلبات الجديدة
+                  window.location.reload();
                 } else {
                   console.error("⚠️ فشل استيراد الطلبات من سلة:", data?.error || data);
-                  alert("❌ فشل في استيراد الطلبات من سلة.");
+                  alert("❌ فشل في استيراد الطلبات من سلة." + (data?.message ? `\n${data.message}` : ""));
                 }
               } catch (error) {
                 console.error("❌ خطأ غير متوقع:", error);
