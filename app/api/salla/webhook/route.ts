@@ -14,6 +14,9 @@ function verifySignature(body: string, signature: string) {
     .update(body)
     .digest("hex");
 
+  console.log("📌 التوقيع المتوقع:", expected);
+  console.log("📥 التوقيع المرسل:", signature);
+
   return expected === signature;
 }
 
