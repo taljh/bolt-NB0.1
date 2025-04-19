@@ -5,9 +5,8 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { Plus, FileUp, RefreshCw, Package, Filter, Search } from "lucide-react";
-import { syncProducts } from "@/lib/sync-products";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -16,6 +15,7 @@ export default function ProductsPage() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
+  const { toast } = useToast();
 
   const fetchProducts = async () => {
     try {
@@ -23,7 +23,7 @@ export default function ProductsPage() {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from("products")
+        .from("products_new")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -32,7 +32,11 @@ export default function ProductsPage() {
       setProducts(data || []);
     } catch (error) {
       console.error("Error fetching products:", error);
-      toast.error("حدث خطأ في جلب المنتجات");
+      toast({
+        variant: "destructive",
+        title: "خطأ",
+        description: "حدث خطأ في جلب المنتجات"
+      });
     } finally {
       setLoading(false);
     }
@@ -42,44 +46,102 @@ export default function ProductsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("يجب تسجيل الدخول أولاً");
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "يجب تسجيل الدخول أولاً"
+        });
         return;
       }
 
       setImporting(true);
-      const result = await syncProducts(user.id);
+      
+      // Get Salla token
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("salla_tokens")
+        .select("access_token")
+        .eq("user_id", user.id)
+        .single();
 
-      if (result?.success) {
-        toast.success("تمت المزامنة بنجاح", {
-          description: `تم مزامنة ${result.count} منتج`
+      if (tokenError || !tokenData?.access_token) {
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "لم يتم العثور على ربط مع سلة"
         });
-        setLastSyncTime(new Date());
-        await fetchProducts();
-      } else {
-        toast.error("فشلت عملية المزامنة", {
-          description: result?.error?.message || "حدث خطأ غير متوقع"
-        });
+        return;
       }
-    } catch (error) {
+
+      // Fetch products from Salla
+      const response = await fetch('https://api.salla.dev/admin/v2/products', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('فشل في جلب المنتجات من سلة');
+      }
+
+      const { data: sallaProducts } = await response.json();
+
+      if (!sallaProducts) {
+        throw new Error('لا توجد منتجات في المتجر');
+      }
+
+      // Prepare products for insertion
+      const productsToInsert = sallaProducts.map((product: any) => ({
+        user_id: user.id,
+        name: product.name,
+        sku: product.sku || null,
+        source: 'salla',
+        salla_product_id: product.id, // Add the Salla product ID
+        created_at: new Date().toISOString()
+      }));
+
+      // Delete existing Salla products
+      const { error: deleteError } = await supabase
+        .from("products_new")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("source", "salla");
+
+      if (deleteError) throw deleteError;
+
+      // Insert new products
+      const { error: insertError } = await supabase
+        .from("products_new")
+        .insert(productsToInsert);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "تم بنجاح",
+        description: `تم مزامنة ${productsToInsert.length} منتج`
+      });
+      
+      setLastSyncTime(new Date());
+      await fetchProducts();
+    } catch (error: any) {
       console.error("Error in sync:", error);
-      toast.error("فشلت عملية المزامنة");
+      toast({
+        variant: "destructive",
+        title: "خطأ في المزامنة",
+        description: error.message || "فشلت عملية المزامنة"
+      });
     } finally {
       setImporting(false);
     }
   };
 
-  // المزامنة التلقائية كل دقيقة
-  useEffect(() => {
-    handleSync(); // المزامنة الأولية عند تحميل الصفحة
-
-    // إعداد المزامنة كل دقيقة
-    const interval = setInterval(handleSync, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // جلب المنتجات عند تحميل الصفحة
   useEffect(() => {
     fetchProducts();
+    handleSync(); // Initial sync when page loads
+
+    // Set up auto-sync every 5 minutes instead of every minute
+    const interval = setInterval(handleSync, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -157,7 +219,7 @@ export default function ProductsPage() {
       <div className="bg-white border shadow-sm rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-12">
