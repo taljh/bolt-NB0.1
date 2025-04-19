@@ -17,6 +17,9 @@ function verifySignature(body: string, signature: string) {
   console.log("📌 التوقيع المتوقع:", expected);
   console.log("📥 التوقيع المرسل:", signature);
 
+  console.log("📌 التوقيع المتوقع:", expected);
+  console.log("📥 التوقيع المرسل:", signature);
+
   return expected === signature;
 }
 
@@ -25,6 +28,7 @@ export async function POST(req: NextRequest) {
     console.log("🧪 SECRET المستخدم:", process.env.SALLA_WEBHOOK_SECRET);
     console.log("📦 Webhook وصل فعليًا 🎉");
     const rawBody = await req.text();
+    console.log("📦 محتوى rawBody:", rawBody);
     const signature = req.headers.get("x-salla-signature") || "";
 
     if (!verifySignature(rawBody, signature)) {
