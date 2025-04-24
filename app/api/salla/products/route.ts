@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { headers } from 'next/headers';
 
 export async function POST() {
   try {
@@ -94,6 +95,64 @@ export async function POST() {
         message: error.message || "Error importing products",
         error: error 
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies });
+    const headersList = new Headers(req.headers);
+    const authToken = headersList.get('Authorization')?.replace('Bearer ', '');
+    const storeHash = headersList.get('Store-Hash');
+
+    if (!authToken || !storeHash) {
+      return NextResponse.json(
+        { error: 'Missing required headers' },
+        { status: 401 }
+      );
+    }
+
+    // 1. استدعاء API سلة لجلب المنتجات
+    const sallaResponse = await fetch('https://api.salla.dev/admin/v2/products?per_page=50', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!sallaResponse.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch products from Salla' },
+        { status: sallaResponse.status }
+      );
+    }
+
+    const sallaData = await sallaResponse.json();
+    
+    // 2. تحويل البيانات إلى الشكل المطلوب
+    const products = sallaData.data.map((product: any) => ({
+      id: product.id.toString(),
+      name: product.name,
+      sku: product.sku || `SALLA-${product.id}`,
+      source: 'salla',
+      created_at: new Date().toISOString(),
+      has_pricing: false,
+      price: product.price?.amount || 0,
+      salla_data: product
+    }));
+
+    return NextResponse.json({
+      success: true,
+      products: products,
+      count: products.length
+    });
+
+  } catch (error) {
+    console.error('Error in Salla products API:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

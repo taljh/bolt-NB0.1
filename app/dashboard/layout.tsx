@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/get-user";
 import Sidebar from "./Sidebar";
 import { cn } from "@/lib/utils";
 import LoadingScreen from "@/components/ui/loading-screen";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const ibm = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
@@ -62,9 +63,11 @@ export default async function DashboardLayout({
         "bg-white/60 backdrop-blur-lg"
       )}>
         <Suspense fallback={<LoadingScreen />}>
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+          <TooltipProvider>
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </TooltipProvider>
         </Suspense>
       </main>
     </div>

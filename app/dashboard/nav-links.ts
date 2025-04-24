@@ -6,9 +6,8 @@ import {
   DollarSign,
   Settings,
   Lock,
-  ShoppingBag,
-  Truck,
-  Box
+  ShoppingCart,
+  Warehouse
 } from "lucide-react";
 
 interface SubLink {

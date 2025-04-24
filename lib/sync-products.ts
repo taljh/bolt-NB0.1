@@ -1,6 +1,7 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { SallaProduct, SyncResult } from "@/types/products";
 
-async function fetchSallaProducts(accessToken: string) {
+async function fetchSallaProducts(accessToken: string): Promise<SallaProduct[]> {
   try {
     const response = await fetch('https://api.salla.dev/admin/v2/products', {
       headers: {
@@ -21,7 +22,7 @@ async function fetchSallaProducts(accessToken: string) {
   }
 }
 
-export async function syncProducts(userId: string) {
+export async function syncProducts(userId: string): Promise<SyncResult> {
   const supabase = createClientComponentClient();
   
   try {
@@ -36,36 +37,61 @@ export async function syncProducts(userId: string) {
       throw new Error("لم يتم العثور على ربط مع سلة");
     }
 
-    // 2. Fetch products from Salla
+    // 2. جلب بيانات التسعير الحالية
+    const { data: existingPricings } = await supabase
+      .from('pricing_details')
+      .select('product_id');
+    
+    // تحويل إلى Set للبحث السريع
+    const pricedProductIds = new Set(existingPricings?.map(p => p.product_id) || []);
+
+    // 3. جلب المنتجات الحالية للحفاظ على SKU
+    const { data: existingProducts } = await supabase
+      .from('products')
+      .select('salla_product_id, sku, has_pricing')
+      .eq('user_id', userId);
+    
+    // تحويل إلى Map للبحث السريع
+    const existingProductsMap = new Map(
+      existingProducts?.map(p => [p.salla_product_id, { sku: p.sku, has_pricing: p.has_pricing }]) || []
+    );
+
+    // 4. Fetch products from Salla
     const products = await fetchSallaProducts(tokenData.access_token);
 
-    // 3. Prepare products for insertion
-    const productsToInsert = products.map((product: any) => ({
-      user_id: userId,
-      name: product.name,
-      sku: product.sku || null,
-      source: 'salla',
-      created_at: new Date().toISOString()
-    }));
+    // 5. Prepare products for upsert with preserved values
+    const productsToUpsert = products.map((product) => {
+      const sallaId = String(product.id);
+      const existingProduct = existingProductsMap.get(sallaId);
+      const hasPricing = existingProductsMap.get(sallaId)?.has_pricing || pricedProductIds.has(sallaId);
+      
+      return {
+        user_id: userId,
+        salla_product_id: sallaId,
+        name: product.name,
+        // نحافظ على الـ SKU من جدول المنتجات أو نستخدم الـ SKU من بيانات سلة إذا كان موجود
+        ...(existingProduct?.sku
+          ? { sku: existingProduct.sku }
+          : product.sku
+            ? { sku: product.sku }
+            : {}),
+        source: 'salla' as const,
+        has_pricing: hasPricing,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    });
 
-    // 4. Delete existing Salla products for this user
-    const { error: deleteError } = await supabase
+    // 6. Upsert products
+    const { error: upsertError } = await supabase
       .from("products")
-      .delete()
-      .eq("user_id", userId)
-      .eq("source", "salla");
+      .upsert(productsToUpsert, {
+        onConflict: 'user_id,salla_product_id',
+        ignoreDuplicates: false
+      });
 
-    if (deleteError) {
-      throw deleteError;
-    }
-
-    // 5. Insert new products
-    const { error: insertError } = await supabase
-      .from("products")
-      .insert(productsToInsert);
-
-    if (insertError) {
-      throw insertError;
+    if (upsertError) {
+      throw upsertError;
     }
 
     return {

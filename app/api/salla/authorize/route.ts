@@ -54,12 +54,17 @@ export async function POST(req: NextRequest) {
   // حفظ المنتجات في قاعدة البيانات
   if (products.length > 0) {
     const productsToInsert = products.map((product: any) => ({
+      salla_product_id: String(product.id),
       name: product.name,
-      sku: product.sku || null
+      sku: product.sku || null,
+      source: 'salla',
+      has_pricing: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
 
     const { error: productsError } = await supabase
-      .from("products_new")
+      .from("products")
       .insert(productsToInsert);
 
     if (productsError) {

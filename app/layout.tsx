@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { IBM_Plex_Sans_Arabic } from 'next/font/google';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from 'sonner';
 
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
   weight: ['300', '400', '500', '600', '700'],
@@ -24,7 +24,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body className={ibmPlexSansArabic.className}>
         {children}
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   );

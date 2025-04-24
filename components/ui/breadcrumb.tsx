@@ -1,16 +1,43 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { ChevronRight, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, MoreHorizontal, ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
-const Breadcrumb = React.forwardRef<
-  HTMLElement,
-  React.ComponentPropsWithoutRef<'nav'> & {
-    separator?: React.ReactNode;
-  }
->(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />);
-Breadcrumb.displayName = 'Breadcrumb';
+interface BreadcrumbItem {
+  label: string;
+  href: string;
+  current?: boolean;
+}
+
+interface BreadcrumbProps {
+  items: BreadcrumbItem[];
+}
+
+export function Breadcrumb({ items }: BreadcrumbProps) {
+  return (
+    <div className="flex items-center space-x-2 text-sm text-gray-500 space-x-reverse">
+      {items.map((item, index) => (
+        <div key={item.href} className="flex items-center">
+          {index !== 0 && (
+            <ChevronLeft className="w-4 h-4 mx-2" />
+          )}
+          {item.current ? (
+            <span className="font-medium text-gray-900">{item.label}</span>
+          ) : (
+            <Link
+              href={item.href}
+              className="hover:text-primary transition-colors"
+            >
+              {item.label}
+            </Link>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const BreadcrumbList = React.forwardRef<
   HTMLOListElement,
@@ -105,7 +132,6 @@ const BreadcrumbEllipsis = ({
 BreadcrumbEllipsis.displayName = 'BreadcrumbElipssis';
 
 export {
-  Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
   BreadcrumbLink,

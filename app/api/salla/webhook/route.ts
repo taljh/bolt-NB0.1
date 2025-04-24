@@ -66,13 +66,14 @@ export async function POST(req: NextRequest) {
       console.log("🟡 يبدأ إدخال المنتج...");
 
       const { data: insertedProduct, error: insertError } = await supabase
-        .from("products_new")
+        .from("products")
         .insert({
           user_id,
           salla_product_id: product.id,
           name: product.name,
           sku: product.sku || null,
           created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           source: "salla"
         })
         .select()
@@ -85,31 +86,20 @@ export async function POST(req: NextRequest) {
         throw insertError;
       }
 
-      console.log("🟢 المنتج أُضيف بنجاح... الآن نضيف التسعيرة");
-
-      const { error: pricingError } = await supabase.from("pricing_details").insert({
-        user_id,
-        product_id: insertedProduct.id
-      });
-
-      if (pricingError) {
-        console.error("❌ خطأ في إضافة التسعيرة:", pricingError);
-      } else {
-        console.log("✅ التسعيرة أُضيفت بنجاح");
-      }
-
     } else if (eventType === "product.updated") {
       await supabase
-        .from("products_new")
+        .from("products")
         .update({
           name: product.name,
-          sku: product.sku || null
+          sku: product.sku || null,
+          updated_at: new Date().toISOString()
         })
         .eq("user_id", user_id)
         .eq("salla_product_id", product.id);
+
     } else if (eventType === "product.deleted") {
       await supabase
-        .from("products_new")
+        .from("products")
         .delete()
         .eq("user_id", user_id)
         .eq("salla_product_id", product.id);

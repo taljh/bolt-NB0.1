@@ -1,93 +1,145 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
+import type { SallaProduct } from "@/types/products";
 
-// دالة لجلب المنتجات من سلة
-async function fetchProducts(accessToken: string) {
-  try {
-    const response = await fetch('https://api.salla.dev/admin/v2/products', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch products');
-    }
-
-    const data = await response.json();
-    return data.data || [];
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
-  }
-}
-
-export async function POST(req: NextRequest) {
+export async function POST() {
+  console.log("🔄 Step 1: Starting sync process...");
+  
   try {
     const supabase = createRouteHandlerClient({ cookies });
-
-    // جلب بيانات المستخدم الحالي
-    const { data: { session }} = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    // 1. التحقق من المستخدم
+    console.log("👤 Step 2: Authenticating user...");
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("❌ Authentication failed:", userError);
+      return NextResponse.json(
+        { error: "غير مصرح لك بالمزامنة" },
+        { status: 401 }
+      );
     }
+    console.log("✅ User authenticated:", user.id);
 
-    // جلب التوكن من جدول salla_tokens
+    // 2. جلب توكن سلة
+    console.log("🔑 Step 3: Fetching Salla token...");
     const { data: tokenData, error: tokenError } = await supabase
       .from("salla_tokens")
       .select("access_token")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
-    if (tokenError || !tokenData) {
+    if (tokenError || !tokenData?.access_token) {
+      console.error("❌ Token fetch failed:", tokenError);
       return NextResponse.json(
-        { error: "No Salla integration found" },
-        { status: 404 }
+        { error: "لم يتم العثور على ربط مع سلة" },
+        { status: 400 }
+      );
+    }
+    console.log("✅ Salla token found");
+
+    // 3. جلب المنتجات من سلة
+    console.log("📡 Step 4: Fetching products from Salla...");
+    const sallaResponse = await fetch("https://api.salla.dev/admin/v2/products", {
+      headers: {
+        "Authorization": `Bearer ${tokenData.access_token}`,
+        "Accept": "application/json"
+      }
+    });
+
+    if (!sallaResponse.ok) {
+      const errorText = await sallaResponse.text();
+      console.error("❌ Salla API error:", {
+        status: sallaResponse.status,
+        statusText: sallaResponse.statusText,
+        body: errorText
+      });
+      return NextResponse.json(
+        { error: "فشل في جلب المنتجات من سلة" },
+        { status: 502 }
       );
     }
 
-    // جلب المنتجات من سلة
-    const products = await fetchProducts(tokenData.access_token);
+    const sallaData = await sallaResponse.json();
+    const sallaProducts = sallaData.data || [];
+    console.log("✅ Fetched", sallaProducts.length, "products from Salla");
 
-    // فلترة وتجهيز المنتجات للإدخال
-    const productsToInsert = products
-      .filter((product: any) => product.id && product.name)
-      .map((product: any) => ({
-        user_id: session.user.id,
-        salla_product_id: product.id,
-        name: product.name,
-        sku: product.sku || null,
-        created_at: new Date().toISOString()
-      }));
+    // 4. تحويل المنتجات إلى الصيغة المطلوبة
+    console.log("🔄 Step 5: Formatting products...");
+    const formattedProducts = sallaProducts.map((product: SallaProduct) => ({
+      user_id: user.id,
+      name: product.name,
+      sku: product.sku || null,
+      salla_product_id: String(product.id),
+      source: "salla" as const,
+      has_pricing: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
 
-    // حذف المنتجات القديمة للمستخدم (اختياري حسب استراتيجيتك)
-    await supabase
-      .from("products_new")
-      .delete()
-      .eq("user_id", session.user.id);
+    // طباعة مثال على المنتج الأول للتحقق
+    console.log("🧪 First product example:", JSON.stringify(formattedProducts[0], null, 2));
+    console.log("📊 Total products to upsert:", formattedProducts.length);
 
-    // إدخال المنتجات الجديدة
-    const { error: insertError } = await supabase
-      .from("products_new")
-      .insert(productsToInsert);
+    // 5. حفظ المنتجات في قاعدة البيانات
+    console.log("💾 Step 6: Upserting to database...");
+    const { data: inserted, error: upsertError } = await supabase
+      .from("products")
+      .upsert(formattedProducts, {
+        onConflict: "user_id,salla_product_id",
+        ignoreDuplicates: false
+      })
+      .select();
 
-    if (insertError) {
-      throw insertError;
+    if (upsertError) {
+      // طباعة تفاصيل الخطأ كاملة
+      console.error("❌ Database upsert failed:", {
+        code: upsertError.code,
+        message: upsertError.message,
+        details: upsertError.details,
+        hint: upsertError.hint
+      });
+      
+      return NextResponse.json({ 
+        error: "فشل في حفظ المنتجات في قاعدة البيانات",
+        details: {
+          code: upsertError.code,
+          message: upsertError.message,
+          details: upsertError.details,
+          hint: upsertError.hint
+        }
+      }, { 
+        status: 500 
+      });
     }
+
+    // 6. إكمال المزامنة بنجاح
+    console.log("✅ Step 7: Sync completed successfully!");
+    console.log("📝 Inserted/Updated products:", inserted?.length || 0);
 
     return NextResponse.json({
       success: true,
-      message: "تمت مزامنة المنتجات بنجاح",
-      count: productsToInsert.length
+      message: "تمت المزامنة بنجاح",
+      count: formattedProducts.length,
+      updated: inserted?.length || 0
     });
 
-  } catch (error: any) {
-    console.error("Error syncing products:", error);
-    return NextResponse.json(
-      { error: error.message || "فشل في مزامنة المنتجات" },
-      { status: 500 }
-    );
+  } catch (error) {
+    // طباعة الخطأ بتفاصيل كاملة
+    console.error("❌ Sync failed with error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
+    // إرجاع رسالة خطأ مفصلة للواجهة
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "حدث خطأ أثناء مزامنة المنتجات",
+      details: process.env.NODE_ENV === "development" ? error : undefined
+    }, {
+      status: 500
+    });
   }
 }

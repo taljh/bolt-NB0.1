@@ -1,6 +1,9 @@
 const crypto = require("crypto");
 
-const secret = "🔐 حط هنا نفس SALLA_WEBHOOK_SECRET من Vercel";
+// ✅ استخدم نفس SALLA_WEBHOOK_SECRET الموجود في Vercel
+const secret = "ff1acbb915c748680dd5d6554c6343"; // استبدل هذا بالقيمة الحقيقية
+
+// ✅ هذا هو البودي المُستخدم لإنشاء التوقيع
 const body = JSON.stringify({
   event: "product.created",
   data: { id: "TEST001", name: "منتج يدوي" },
@@ -14,3 +17,8 @@ const signature = crypto
 
 console.log("✅ التوقيع الجاهز:", signature);
 console.log("📦 البودي المستخدم:", body);
+console.log("\n📋 أمر CURL الجاهز:\n");
+console.log(`curl -X POST https://bn-v07.vercel.app/api/salla/webhook \\
+  -H "Content-Type: application/json" \\
+  -H "x-salla-signature: ${signature}" \\
+  -d '${body}'`);
